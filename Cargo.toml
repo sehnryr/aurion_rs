@@ -1,0 +1,19 @@
+[package]
+name = "aurion-rs"
+version = "0.1.0"
+edition = "2021"
+authors = ["Youn Mélois <youn@melois.dev>"]
+repository = "https://github.com/sehnryr/aurion-rs"
+homepage = "https://github.com/sehnryr/aurion-rs"
+readme = "README.md"
+license = "GPL-3.0-or-later"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+chrono = "0.4.23"
+dyer = { version = "3.3.2", features = ["xpath"] }
+log = "0.4.17"
+regex = "1.7.1"
+reqwest = { version = "0.11.14", features = ["cookies", "json"] }
+serde_json = "1.0.91"
