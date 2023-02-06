@@ -12,6 +12,7 @@ use reqwest::{Client, ClientBuilder};
 use serde_json::{json, Value, Value::Bool};
 
 use crate::default::{school_end, school_start};
+use crate::event::{RawEvent, Event};
 use crate::menu::{Menu, Node};
 use crate::pages::Pages;
 use crate::utils::{get_form_id, get_schedule_form_id, get_view_state};
@@ -363,7 +364,7 @@ impl Aurion {
         &self,
         start: Option<DateTime<Utc>>,
         end: Option<DateTime<Utc>>,
-    ) -> Result<Vec<Value>, Box<dyn std::error::Error>> {
+    ) -> Result<Vec<Event>, Box<dyn std::error::Error>> {
         // Send the request to get the schedule form id
         let response = self.client.get(self.pages.planning_url()).send().await;
 
@@ -442,7 +443,12 @@ impl Aurion {
         let data = splitted.unwrap().1.split_once("}]]></update>").unwrap().0;
 
         // Parse the schedule
-        let schedule: Vec<Value> = serde_json::from_str(data).unwrap();
+        let mut schedule: Vec<Event> = Vec::new();
+        let raw_schedule: Vec<RawEvent> = serde_json::from_str(data)?;
+        for raw_event in raw_schedule {
+            let event = Event::from_raw_event(raw_event)?;
+            schedule.push(event);
+        }
 
         Ok(schedule)
     }
@@ -453,7 +459,7 @@ impl Aurion {
         &mut self,
         start: Option<DateTime<Utc>>,
         end: Option<DateTime<Utc>>,
-    ) -> Result<Vec<Value>, Box<dyn std::error::Error>> {
+    ) -> Result<Vec<Event>, Box<dyn std::error::Error>> {
         // Load the schooling menu node if it is not loaded
         let schooling_id = self.menu.schooling_id().to_string();
         if !self.menu.is_node_loaded(schooling_id.clone()) {
