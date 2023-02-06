@@ -1,4 +1,4 @@
-# aurion-rs
+# aurion_rs
 
 Aurion is an ERP (Enterprise Resource Planning) developed by [Auriga](https://www.auriga.fr/)
 used by multiple French universities. It is a web application that provides
