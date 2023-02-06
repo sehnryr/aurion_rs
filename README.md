@@ -1,9 +1,9 @@
 # aurion_rs
 
-![Crates.io](https://img.shields.io/crates/v/aurion_rs)
-![docs.rs](https://img.shields.io/docsrs/aurion_rs)
-![GitHub repo size](https://img.shields.io/github/repo-size/sehnryr/aurion_rs)
-![GitHub](https://img.shields.io/github/license/sehnryr/aurion_rs)
+[![Crates.io](https://img.shields.io/crates/v/aurion_rs)](https://crates.io/crates/aurion_rs)
+[![docs.rs](https://img.shields.io/docsrs/aurion_rs)](https://docs.rs/aurion_rs)
+[![GitHub repo size](https://img.shields.io/github/repo-size/sehnryr/aurion_rs)](https://github.com/sehnryr/aurion_rs)
+[![GitHub](https://img.shields.io/github/license/sehnryr/aurion_rs)](https://github.com/sehnryr/aurion_rs/blob/main/LICENSE)
 
 Aurion is an ERP (Enterprise Resource Planning) developed by [Auriga](https://www.auriga.fr/)
 used by multiple French universities. It is a web application that provides
