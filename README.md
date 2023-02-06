@@ -2,6 +2,8 @@
 
 ![Crates.io](https://img.shields.io/crates/v/aurion_rs)
 ![docs.rs](https://img.shields.io/docsrs/aurion_rs)
+![GitHub repo size](https://img.shields.io/github/repo-size/sehnryr/aurion_rs)
+![GitHub](https://img.shields.io/github/license/sehnryr/aurion_rs)
 
 Aurion is an ERP (Enterprise Resource Planning) developed by [Auriga](https://www.auriga.fr/)
 used by multiple French universities. It is a web application that provides
