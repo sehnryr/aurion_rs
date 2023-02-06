@@ -3,8 +3,8 @@ name = "aurion_rs"
 version = "0.1.0"
 edition = "2021"
 authors = ["Youn Mélois <youn@melois.dev>"]
-repository = "https://github.com/sehnryr/aurion-rs"
-homepage = "https://github.com/sehnryr/aurion-rs"
+repository = "https://github.com/sehnryr/aurion_rs"
+homepage = "https://github.com/sehnryr/aurion_rs"
 readme = "README.md"
 license = "GPL-3.0-or-later"
 
