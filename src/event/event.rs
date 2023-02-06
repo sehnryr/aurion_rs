@@ -1,31 +1,75 @@
+#![deny(missing_docs)]
+
 use chrono::{DateTime, Utc};
 use log::error;
 use serde::{Deserialize, Serialize};
 
 use super::RawEvent;
 
+/// The kind of an event.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum EventKind {
+    /// A course.
     Course,
+
+    /// An exam.
     Exam,
+
+    /// A leave.
     Leave,
+
+    /// A meeting.
     Meeting,
+
+    /// A practical work.
     PracticalWork,
+
+    /// A supervised work.
     SupervisedWork,
+
+    /// A project.
     Project,
+
+    /// An other event.
     Other,
 }
 
+/// An event.
+/// An event is a course, an exam, a meeting, etc.
+/// It has a start and an end date, a subject, a chapter, a list of rooms and a
+/// list of participants.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Event {
-    id: u32,
-    kind: EventKind,
-    start: DateTime<Utc>,
-    end: DateTime<Utc>,
-    rooms: Vec<String>,
-    subject: String,
-    chapter: Option<String>,
-    participants: Vec<String>,
+    /// The id of the event.
+    /// This id is unique for each event.
+    pub id: u32,
+
+    /// The kind of the event.
+    /// This is the type of the event, for example "Course" or "Exam".
+    pub kind: EventKind,
+
+    /// The start date and time of the event.
+    pub start: DateTime<Utc>,
+
+    /// The end date and time of the event.
+    pub end: DateTime<Utc>,
+
+    /// The rooms where the event takes place.
+    pub rooms: Vec<String>,
+
+    /// The subject of the event.
+    /// This is the name of the course, the name of the exam, etc, for example
+    /// "Mathematics" or "Physics".
+    pub subject: String,
+
+    /// The chapter of the event.
+    /// This is the name of the chapter, for example "Vectors" or "Electricity".
+    pub chapter: Option<String>,
+
+    /// The participants of the event.
+    /// This is the list of the participants, professors or supervisor, for
+    /// example "John Doe" or "Jane Doe".
+    pub participants: Vec<String>,
 }
 
 impl Event {
