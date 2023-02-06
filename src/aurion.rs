@@ -6,7 +6,6 @@ use std::rc::Rc;
 use chrono::{DateTime, Utc};
 #[allow(unused_imports)]
 use log::{debug, error, info, trace, warn};
-use regex::Regex;
 use reqwest::redirect::Policy;
 use reqwest::{Client, ClientBuilder};
 use serde_json::{json, Value, Value::Bool};
@@ -252,8 +251,8 @@ impl Aurion {
                 .findnodes("a/span[@class=\"ui-menuitem-text\"]/text()")
                 .unwrap()[0]
                 .get_content();
-            let re = Regex::new("Plannings?").unwrap();
-            let name = re.replace(&name, "");
+            let name = name.replace("Plannings", "");
+            let name = name.replace("Planning", "");
             let name = name.trim().to_string();
 
             // A node can either be a parent that holds unloaded submenus (children)
