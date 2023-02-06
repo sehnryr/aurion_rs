@@ -1,6 +1,6 @@
 [package]
 name = "aurion_rs"
-version = "0.2.0"
+version = "0.2.1"
 edition = "2021"
 authors = ["Youn Mélois <youn@melois.dev>"]
 description = "Aurion API in Rust"
