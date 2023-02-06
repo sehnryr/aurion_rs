@@ -1,3 +1,5 @@
+#![deny(missing_docs)]
+
 use std::cell::RefCell;
 use std::rc::Rc;
 
@@ -26,6 +28,7 @@ pub struct Aurion {
 }
 
 impl Aurion {
+    /// Create a new Aurion instance.
     pub fn new<S: Into<String>, U: Into<String>, G: Into<String>, T: Into<String>>(
         language_code: u32,
         schooling_id: S,
@@ -73,20 +76,19 @@ impl Aurion {
     ///
     /// # Example
     ///
-    /// ```
-    /// use aurion_rs::Aurion;
-    ///
-    /// #[tokio::main]
-    /// async fn main() {
-    ///     let mut aurion = Aurion::new(
-    ///         275805,
-    ///         "submenu_291906",
-    ///         "1_3",
-    ///         "submenu_299102",
-    ///         "https://web.isen-ouest.fr/webAurion/",
-    ///     );
+    /// ```rust
+    /// # use aurion_rs::Aurion;
+    /// # async fn run() -> Result<(), reqwest::Error> {
+    /// #     let mut aurion = Aurion::new(
+    /// #         275805,
+    /// #         "submenu_291906",
+    /// #         "1_3",
+    /// #         "submenu_299102",
+    /// #         "https://web.isen-ouest.fr/webAurion/",
+    /// #     );
     ///     aurion.login("username", "password").await;
-    /// }
+    /// #     Ok(())
+    /// # }
     /// ```
     pub async fn login<U: Into<String>, P: Into<String>>(
         &mut self,
@@ -315,15 +317,20 @@ impl Aurion {
     ///
     /// # Examples
     ///
-    /// ```
-    /// use aurion_rs::Aurion;
-    ///
-    /// #[tokio::main]
-    /// async fn main() {
-    ///     let mut aurion = Aurion::new(/* ... */);
-    ///     aurion.login("username", "password").await.unwrap();
-    ///     aurion.load_menu_nodes(vec!["submenu_1", "submenu_2"]).await.unwrap();
-    /// }
+    /// ```rust
+    /// # use aurion_rs::Aurion;
+    /// # async fn run() -> Result<(), reqwest::Error> {
+    /// #     let mut aurion = Aurion::new(
+    /// #         275805,
+    /// #         "submenu_291906",
+    /// #         "1_3",
+    /// #         "submenu_299102",
+    /// #         "https://web.isen-ouest.fr/webAurion/",
+    /// #     );
+    /// #     aurion.login("username", "password").await;
+    ///     aurion.load_menu_nodes(vec!["submenu_1", "submenu_2"]).await;
+    /// #     Ok(())
+    /// # }
     pub async fn load_menu_nodes<T: Into<String>, V: Into<Vec<T>>>(
         &mut self,
         menu_nodes: V,
