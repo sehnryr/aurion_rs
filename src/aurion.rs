@@ -11,9 +11,10 @@ use reqwest::{Client, ClientBuilder};
 use serde_json::{json, Value, Value::Bool};
 
 use crate::default::{school_end, school_start};
-use crate::event::{RawEvent, Event};
+use crate::event::{Event, RawEvent};
 use crate::menu::{Menu, Node};
 use crate::pages::Pages;
+use crate::schedule::ClassGroup;
 use crate::utils::{get_form_id, get_schedule_form_id, get_view_state};
 
 /// The main Aurion struct.
@@ -356,6 +357,131 @@ impl Aurion {
         Ok(())
     }
 
+    /// Get the class groups designated by class_group_id.
+    /// A class can have multiple groups, for example, a class can have a
+    /// group for the morning and a group for the afternoon. This function
+    /// returns the groups designated by class_group_id.
+    pub async fn get_class_groups<T: Into<String>>(
+        &self,
+        class_group_id: T,
+    ) -> Result<Vec<ClassGroup>, Box<dyn std::error::Error>> {
+        let class_group_id = class_group_id.into();
+
+        // We need to check if the node is loaded. If it is not, we need
+        // to load it first because of Aurion's lazy-loading menu tree.
+
+        // Try to get the node from the menu tree
+        let node = self.menu.get_menu_node(class_group_id.clone());
+
+        // Check if the node was found
+        if node.is_none() {
+            error!("Node {} not found", class_group_id.clone());
+            return Err("failed to get class groups".into());
+        }
+
+        // Get the node
+        let node = node.unwrap();
+
+        // Check if the node is a leaf node
+        if !node.borrow().is_leaf() {
+            error!("Node {} is not a leaf node", class_group_id);
+            return Err("failed to get class groups".into());
+        }
+
+        // Check if the node is loaded
+        if !node.borrow().is_loaded() {
+            error!("Node {} is not loaded", class_group_id);
+            return Err("failed to get class groups".into());
+        }
+
+        // Get the class groups
+
+        // Send the request to load the page for getting the class groups
+        let payload = self.default_parameters(class_group_id);
+        let response = self
+            .client
+            .post(self.pages.main_menu_url())
+            .form(&payload)
+            .send()
+            .await;
+
+        // Check if the request was successful
+        if response.is_err() {
+            error!("Request to get class groups failed");
+            return Err(Box::new(std::io::Error::new(
+                std::io::ErrorKind::Other,
+                "failed to get class groups",
+            )));
+        }
+
+        // Parse the response
+        let response = response.unwrap();
+        let headers = response.headers();
+
+        // Check if the response was successful
+        if !headers.contains_key("location") {
+            error!("Response to get class groups was not successful");
+            return Err(Box::new(std::io::Error::new(
+                std::io::ErrorKind::Other,
+                "failed to get class groups",
+            )));
+        }
+
+        // Send the request to get the class groups
+        let response = self
+            .client
+            .get(self.pages.planning_choice_url())
+            .send()
+            .await;
+
+        // Check if the request was successful
+        if response.is_err() {
+            error!("Request to get class groups failed");
+            return Err(Box::new(std::io::Error::new(
+                std::io::ErrorKind::Other,
+                "failed to get class groups",
+            )));
+        }
+
+        // Parse the response
+        let response = response.unwrap();
+
+        // Parse the response data to dyer::Response to support XPath
+        let body = dyer::Body::from(response.text().await.unwrap());
+        let mut response = dyer::Response::new(body);
+
+        // Get the class groups
+        let class_groups = response.xpath("//div[@id=\"form:dataTableFavori\"]//tbody/tr");
+
+        // Check if the class groups were found
+        if class_groups.is_empty() {
+            error!("Class groups not found");
+            return Err(Box::new(std::io::Error::new(
+                std::io::ErrorKind::Other,
+                "failed to get class groups",
+            )));
+        }
+
+        // Parse the class groups
+        let mut groups = Vec::new();
+        for class_group in class_groups {
+            let id = class_group
+                .get_attribute("data-rk")
+                .unwrap()
+                .parse::<u32>()
+                .unwrap();
+            let name = class_group
+                .get_last_element_child()
+                .unwrap()
+                .get_last_element_child()
+                .unwrap()
+                .get_content();
+            groups.push(ClassGroup::new(id, name));
+        }
+
+        Ok(groups)
+    }
+
     /// Get the lazy-loaded schedule previously initialized by either calling
     /// `get_user_schedule` or `get_group_schedule`.
     /// The schedule is returned as a vector of `Value`s.
@@ -451,6 +577,13 @@ impl Aurion {
 
         Ok(schedule)
     }
+
+    // pub async fn get_group_schedule<T: Into<String>>(
+    //     &mut self,
+    //     group_id: T,
+    //     start: Option<DateTime<Utc>>,
+    //     end: Option<DateTime<Utc>>,
+    // )
 
     /// Get the user's schedule.
     /// The schedule is returned as a vector of `Value`s.
