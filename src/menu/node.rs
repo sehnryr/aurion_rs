@@ -35,4 +35,9 @@ impl Node {
     pub fn is_loaded(&self) -> bool {
         !(&self.id.starts_with("submenu_") ^ !self.children.is_empty())
     }
+
+    /// Check if the node is a leaf
+    pub fn is_leaf(&self) -> bool {
+        !self.id.starts_with("submenu_") && self.children.is_empty()
+    }
 }
