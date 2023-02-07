@@ -87,7 +87,7 @@ impl Aurion {
     /// #         "submenu_299102",
     /// #         "https://web.isen-ouest.fr/webAurion/",
     /// #     );
-    ///     aurion.login("username", "password").await;
+    /// aurion.login("username", "password").await;
     /// #     Ok(())
     /// # }
     /// ```
@@ -329,7 +329,7 @@ impl Aurion {
     /// #         "https://web.isen-ouest.fr/webAurion/",
     /// #     );
     /// #     aurion.login("username", "password").await;
-    ///     aurion.load_menu_nodes(vec!["submenu_1", "submenu_2"]).await;
+    /// aurion.load_menu_nodes(vec!["submenu_1", "submenu_2"]).await;
     /// #     Ok(())
     /// # }
     pub async fn load_menu_nodes<T: Into<String>, V: Into<Vec<T>>>(
