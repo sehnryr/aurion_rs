@@ -233,10 +233,11 @@ impl Aurion {
             // A node can either be a parent that holds unloaded submenus (children)
             // or a leaf. The parsing of the id for the two cases is
             // unfortunately different.
-            let id;
+            let parent = Rc::clone(&menu_node);
+
             if is_parent {
                 // the id is contained in the class of the <li>
-                id = format!(
+                let id = format!(
                     "submenu_{}",
                     child_node
                         .clone()
@@ -249,26 +250,41 @@ impl Aurion {
                         .unwrap()
                         .0
                 );
+
+                let child = Rc::new(RefCell::new(Node::new(id.clone(), name, Some(parent))));
+
+                node.add_child(Rc::clone(&child));
+                self.menu.add_node(id, Rc::clone(&child));
             } else {
                 // The id here is contained in the "onclick" attribute of the <a>
-                let _id = child_node.clone().findnodes("a").unwrap()[0]
+                let id = format!(
+                    "item_{}",
+                    child_node.clone().findnodes("a").unwrap()[0]
+                        .get_attribute("class")
+                        .unwrap()
+                        .split_once(" item_")
+                        .unwrap()
+                        .1
+                        .split_once(" ")
+                        .unwrap()
+                        .0
+                );
+                let page_id = child_node.clone().findnodes("a").unwrap()[0]
                     .get_attribute("onclick")
                     .unwrap();
-                let _id = _id
+                let page_id = page_id
                     .split_once("form:sidebar_menuid':'")
                     .unwrap()
                     .1
                     .split_once("'")
                     .unwrap()
                     .0;
-                id = _id.to_string();
+
+                let child = Rc::new(RefCell::new(Node::new(page_id, name, Some(parent))));
+
+                node.add_child(Rc::clone(&child));
+                self.menu.add_node(id, Rc::clone(&child));
             }
-
-            let parent = Rc::clone(&menu_node);
-            let child = Rc::new(RefCell::new(Node::new(id.clone(), name, Some(parent))));
-
-            node.add_child(Rc::clone(&child));
-            self.menu.add_node(Rc::clone(&child));
         }
 
         Ok(node.get_children().to_vec())
@@ -530,9 +546,15 @@ impl Aurion {
             self.load_menu_nodes([schooling_id.clone()]).await.unwrap();
         }
 
+        // Get the user planning node
+        let user_planning_node = self
+            .menu
+            .get_menu_node(self.menu.user_planning_id())
+            .unwrap();
+
         // Send the request to prepare to get the user's schedule
         trace!("Preparing to get user schedule");
-        let payload = self.default_parameters(self.menu.user_planning_id());
+        let payload = self.default_parameters(user_planning_node.borrow().id.clone());
         let response = self
             .client
             .post(self.pages.main_menu_url())

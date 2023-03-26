@@ -60,9 +60,8 @@ impl Menu {
         &self.groups_planning_id
     }
 
-    pub fn add_node(&mut self, node: Rc<RefCell<Node>>) {
-        let menu_id = node.borrow().id.clone();
-        self.nodes.insert(menu_id, node);
+    pub fn add_node(&mut self, id: String, node: Rc<RefCell<Node>>) {
+        self.nodes.insert(id, node);
     }
 
     pub fn get_menu_node<T: Into<String>>(&self, menu_id: T) -> Option<Rc<RefCell<Node>>> {
