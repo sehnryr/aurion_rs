@@ -384,7 +384,7 @@ impl Aurion {
         // Get the class groups
 
         // Send the request to load the page for getting the class groups
-        let payload = self.default_parameters(class_group_id);
+        let payload = self.default_parameters(node.borrow().id.clone());
         trace!("Sending first request to get class groups");
         let response = self
             .client
