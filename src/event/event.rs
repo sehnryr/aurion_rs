@@ -1,5 +1,6 @@
 #![deny(missing_docs)]
 
+use anyhow::{Error, Result};
 use chrono::{DateTime, Utc};
 use log::error;
 use serde::{Deserialize, Serialize};
@@ -74,7 +75,7 @@ pub struct Event {
 
 impl Event {
     /// Parse a raw event into an event.
-    pub fn from_raw_event(event: RawEvent) -> Result<Event, Box<dyn std::error::Error>> {
+    pub fn from_raw_event(event: RawEvent) -> Result<Event> {
         parse_event(event)
     }
 }
@@ -97,7 +98,7 @@ fn map_kind<T: Into<String>>(event_type: T) -> EventKind {
 }
 
 /// Parse a raw event into an event.
-fn parse_event(event: RawEvent) -> Result<Event, Box<dyn std::error::Error>> {
+fn parse_event(event: RawEvent) -> Result<Event> {
     let id: u32 = event.id.parse().unwrap();
     let kind = map_kind(event.className);
 
@@ -106,8 +107,9 @@ fn parse_event(event: RawEvent) -> Result<Event, Box<dyn std::error::Error>> {
     let (rooms, subject, chapter, participants) = match result {
         Ok((rooms, subject, chapter, participants)) => (rooms, subject, chapter, participants),
         Err(e) => {
-            error!("Failed to parse event title: {}", e);
-            return Err(e);
+            let message = format!("Failed to parse event title: {}", e);
+            error!("{}", message);
+            return Err(Error::msg(message));
         }
     };
 
@@ -127,7 +129,7 @@ fn parse_event(event: RawEvent) -> Result<Event, Box<dyn std::error::Error>> {
 /// The title is of the form "12h00 à 13h00 - ...".
 fn parse_title<T: Into<String>>(
     title: T,
-) -> Result<(Vec<String>, String, Option<String>, Vec<String>), Box<dyn std::error::Error>> {
+) -> Result<(Vec<String>, String, Option<String>, Vec<String>)> {
     let title = title.into();
     let mut rooms: Vec<String> = Vec::new();
     let subject: String;
@@ -173,11 +175,11 @@ fn parse_title<T: Into<String>>(
         // TODO: Implement the second case (ISEN Lille)
         panic!("Not implemented yet");
     } else {
-        error!("The title is not of the form \"12h00 à 13h00 - ...\" or \"12h00 - 13h00 - ...\".");
-        return Err(
+        let message = format!(
             "The title is not of the form \"12h00 à 13h00 - ...\" or \"12h00 - 13h00 - ...\"."
-                .into(),
         );
+        error!("{}", message);
+        return Err(Error::msg(message));
     }
 
     Ok((rooms, subject, chapter, participants))

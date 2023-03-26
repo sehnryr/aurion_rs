@@ -3,6 +3,7 @@
 use std::cell::RefCell;
 use std::rc::Rc;
 
+use anyhow::{Error, Result};
 use chrono::{DateTime, Utc};
 #[allow(unused_imports)]
 use log::{debug, error, info, trace, warn};
@@ -95,7 +96,7 @@ impl Aurion {
         &mut self,
         username: U,
         password: P,
-    ) -> Result<(), Box<dyn std::error::Error>> {
+    ) -> Result<()> {
         // Create the payload for the authentication request
         let payload = json!({
             "username": username.into(),
@@ -112,22 +113,18 @@ impl Aurion {
 
         // Check if the request failed
         if response.is_err() {
-            error!("Failed to login: {}", response.err().unwrap());
-            return Err(Box::new(std::io::Error::new(
-                std::io::ErrorKind::Other,
-                "failed to login",
-            )));
+            let message = format!("Failed to login: {}", response.err().unwrap());
+            error!("{}", message);
+            return Err(Error::msg(message));
         }
 
         // Check if the credentials are correct with the automated redirection
         // by Aurion
         let response = response.unwrap();
         if !response.headers().contains_key("location") {
-            error!("Failed to login: username or password might be wrong.");
-            return Err(Box::new(std::io::Error::new(
-                std::io::ErrorKind::Other,
-                "username or password might be wrong",
-            )));
+            let message = format!("Failed to login: username or password might be wrong.");
+            error!("{}", message);
+            return Err(Error::msg(message));
         }
 
         // Send a dummy request to fetch the view state and form id values from
@@ -156,19 +153,17 @@ impl Aurion {
     pub async fn get_menu_child_nodes<T: Into<String>>(
         &mut self,
         menu_id: T,
-    ) -> Result<Vec<Rc<RefCell<Node>>>, Box<dyn std::error::Error>> {
+    ) -> Result<Vec<Rc<RefCell<Node>>>> {
         let menu_id = menu_id.into();
         let menu_node = self.menu.get_menu_node(menu_id.clone());
 
         if menu_node.is_none() {
-            error!(
+            let message = format!(
                 "Failed to get menu child nodes: menu node with id {} not found.",
                 menu_id.clone()
             );
-            return Err(Box::new(std::io::Error::new(
-                std::io::ErrorKind::Other,
-                "menu node not found",
-            )));
+            error!("{}", message);
+            return Err(Error::msg(message));
         }
 
         let menu_node = menu_node.unwrap();
@@ -202,14 +197,12 @@ impl Aurion {
 
         // Check if the request failed
         if response.is_err() {
-            error!(
+            let message = format!(
                 "Failed to get menu child nodes: {}",
                 response.err().unwrap()
             );
-            return Err(Box::new(std::io::Error::new(
-                std::io::ErrorKind::Other,
-                "failed to get menu child nodes",
-            )));
+            error!("{}", message);
+            return Err(Error::msg(message));
         }
 
         // Get the raw html data from the response
@@ -219,11 +212,9 @@ impl Aurion {
         let splitted = text.split(splitter).collect::<Vec<&str>>();
 
         if splitted.len() < 2 {
-            error!("Failed to get menu child nodes: invalid response");
-            return Err(Box::new(std::io::Error::new(
-                std::io::ErrorKind::Other,
-                "failed to get menu child nodes",
-            )));
+            let message = format!("Failed to get menu child nodes: invalid response");
+            error!("{}", message);
+            return Err(Error::msg(message));
         }
 
         let raw_data = splitted[1].split("]]></update>").collect::<Vec<&str>>()[0];
@@ -335,7 +326,7 @@ impl Aurion {
     pub async fn load_menu_nodes<T: Into<String>, V: Into<Vec<T>>>(
         &mut self,
         menu_nodes: V,
-    ) -> Result<(), Box<dyn std::error::Error>> {
+    ) -> Result<()> {
         for menu_node in menu_nodes.into() {
             let menu_node = menu_node.into();
 
@@ -345,12 +336,10 @@ impl Aurion {
                 continue;
             }
 
-            let result = self.get_menu_child_nodes(menu_node).await;
+            let result = self.get_menu_child_nodes(menu_node.clone()).await;
             if result.is_err() {
-                return Err(Box::new(std::io::Error::new(
-                    std::io::ErrorKind::Other,
-                    "failed to load menu nodes",
-                )));
+                let message = format!("Failed to load menu node {}", menu_node);
+                return Err(Error::msg(message));
             }
         }
 
@@ -364,7 +353,7 @@ impl Aurion {
     pub async fn get_class_groups<T: Into<String>>(
         &self,
         class_group_id: T,
-    ) -> Result<Vec<ClassGroup>, Box<dyn std::error::Error>> {
+    ) -> Result<Vec<ClassGroup>> {
         let class_group_id = class_group_id.into();
 
         // We need to check if the node is loaded. If it is not, we need
@@ -375,8 +364,9 @@ impl Aurion {
 
         // Check if the node was found
         if node.is_none() {
-            error!("Node {} not found", class_group_id.clone());
-            return Err("failed to get class groups".into());
+            let message = format!("Node {} not found", class_group_id.clone());
+            error!("{}", message);
+            return Err(Error::msg(message));
         }
 
         // Get the node
@@ -384,14 +374,16 @@ impl Aurion {
 
         // Check if the node is a leaf node
         if !node.borrow().is_leaf() {
-            error!("Node {} is not a leaf node", class_group_id);
-            return Err("failed to get class groups".into());
+            let message = format!("Node {} is not a leaf node", class_group_id.clone());
+            error!("{}", message);
+            return Err(Error::msg(message));
         }
 
         // Check if the node is loaded
         if !node.borrow().is_loaded() {
-            error!("Node {} is not loaded", class_group_id);
-            return Err("failed to get class groups".into());
+            let message = format!("Node {} is not loaded", class_group_id.clone());
+            error!("{}", message);
+            return Err(Error::msg(message));
         }
 
         // Get the class groups
@@ -407,11 +399,9 @@ impl Aurion {
 
         // Check if the request was successful
         if response.is_err() {
-            error!("Request to get class groups failed");
-            return Err(Box::new(std::io::Error::new(
-                std::io::ErrorKind::Other,
-                "failed to get class groups",
-            )));
+            let message = format!("Request to get class groups failed");
+            error!("{}", message);
+            return Err(Error::msg(message));
         }
 
         // Parse the response
@@ -420,11 +410,9 @@ impl Aurion {
 
         // Check if the response was successful
         if !headers.contains_key("location") {
-            error!("Response to get class groups was not successful");
-            return Err(Box::new(std::io::Error::new(
-                std::io::ErrorKind::Other,
-                "failed to get class groups",
-            )));
+            let message = format!("Response to get class groups was not successful");
+            error!("{}", message);
+            return Err(Error::msg(message));
         }
 
         // Send the request to get the class groups
@@ -436,11 +424,9 @@ impl Aurion {
 
         // Check if the request was successful
         if response.is_err() {
-            error!("Request to get class groups failed");
-            return Err(Box::new(std::io::Error::new(
-                std::io::ErrorKind::Other,
-                "failed to get class groups",
-            )));
+            let message = format!("Request to get class groups failed");
+            error!("{}", message);
+            return Err(Error::msg(message));
         }
 
         // Parse the response
@@ -455,11 +441,9 @@ impl Aurion {
 
         // Check if the class groups were found
         if class_groups.is_empty() {
-            error!("Class groups not found");
-            return Err(Box::new(std::io::Error::new(
-                std::io::ErrorKind::Other,
-                "failed to get class groups",
-            )));
+            let message = format!("Class groups not found");
+            error!("{}", message);
+            return Err(Error::msg(message));
         }
 
         // Parse the class groups
@@ -489,16 +473,14 @@ impl Aurion {
         &self,
         start: Option<DateTime<Utc>>,
         end: Option<DateTime<Utc>>,
-    ) -> Result<Vec<Event>, Box<dyn std::error::Error>> {
+    ) -> Result<Vec<Event>> {
         // Send the request to get the schedule form id
         let response = self.client.get(self.pages.planning_url()).send().await;
 
         // Check if the request was successful
         if response.is_err() {
-            return Err(Box::new(std::io::Error::new(
-                std::io::ErrorKind::Other,
-                "failed to get schedule form id",
-            )));
+            let message = format!("Request to get schedule form id failed");
+            return Err(Error::msg(message));
         }
 
         // Parse the response
@@ -509,10 +491,8 @@ impl Aurion {
 
         // Check if the form id was found
         if schedule_form_id.is_none() {
-            return Err(Box::new(std::io::Error::new(
-                std::io::ErrorKind::Other,
-                "failed to get schedule form id",
-            )));
+            let message = format!("Schedule form id not found");
+            return Err(Error::msg(message));
         }
 
         // Parse the form id
@@ -545,10 +525,8 @@ impl Aurion {
 
         // Check if the request was successful
         if response.is_err() {
-            return Err(Box::new(std::io::Error::new(
-                std::io::ErrorKind::Other,
-                "failed to get schedule: payload is not valid",
-            )));
+            let message = format!("Request to get schedule failed");
+            return Err(Error::msg(message));
         }
 
         // Parse the response
@@ -559,10 +537,8 @@ impl Aurion {
 
         // Check if the response was valid
         if splitted.is_none() {
-            return Err(Box::new(std::io::Error::new(
-                std::io::ErrorKind::Other,
-                "failed to get schedule: payload is not valid",
-            )));
+            let message = format!("Response to get schedule was not valid");
+            return Err(Error::msg(message));
         }
 
         let data = splitted.unwrap().1.split_once("}]]></update>").unwrap().0;
@@ -591,7 +567,7 @@ impl Aurion {
         &mut self,
         start: Option<DateTime<Utc>>,
         end: Option<DateTime<Utc>>,
-    ) -> Result<Vec<Event>, Box<dyn std::error::Error>> {
+    ) -> Result<Vec<Event>> {
         // Load the schooling menu node if it is not loaded
         let schooling_id = self.menu.schooling_id().to_string();
         if !self.menu.is_node_loaded(schooling_id.clone()) {
@@ -610,11 +586,9 @@ impl Aurion {
 
         // Check if the request was successful
         if response.is_err() {
-            error!("Failed to get user schedule: invalid response");
-            return Err(Box::new(std::io::Error::new(
-                std::io::ErrorKind::Other,
-                "failed to get user schedule",
-            )));
+            let message = format!("Request to prepare to get user schedule failed");
+            error!("{}", message);
+            return Err(Error::msg(message));
         }
 
         // Parse the response
@@ -623,11 +597,9 @@ impl Aurion {
 
         // Check if the response is valid
         if !headers.clone().contains_key("location") {
-            error!("Failed to get user schedule: payload is not right");
-            return Err(Box::new(std::io::Error::new(
-                std::io::ErrorKind::Other,
-                "failed to get user schedule, payload is not right",
-            )));
+            let message = format!("Response to prepare to get user schedule is not valid");
+            error!("{}", message);
+            return Err(Error::msg(message));
         }
 
         // Send the request to get the user's schedule
