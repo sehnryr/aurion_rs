@@ -104,23 +104,18 @@ impl Aurion {
         });
 
         // Send the request
+        trace!("Beginning login request.");
         let response = self
             .client
             .post(self.pages.login_url())
             .form(&payload)
             .send()
-            .await;
-
-        // Check if the request failed
-        if response.is_err() {
-            let message = format!("Failed to login: {}", response.err().unwrap());
-            error!("{}", message);
-            return Err(Error::msg(message));
-        }
+            .await?;
+        trace!("Login request sent.");
 
         // Check if the credentials are correct with the automated redirection
         // by Aurion
-        let response = response.unwrap();
+        trace!("Checking login response.");
         if !response.headers().contains_key("location") {
             let message = format!("Failed to login: username or password might be wrong.");
             error!("{}", message);
@@ -129,13 +124,10 @@ impl Aurion {
 
         // Send a dummy request to fetch the view state and form id values from
         // Aurion's main logged page
-        let dummy_response = self
-            .client
-            .get(self.pages.service_url())
-            .send()
-            .await
-            .unwrap();
-        let dummy_text = dummy_response.text().await.unwrap();
+        trace!("Fetching view state and form id values.");
+        let dummy_response = self.client.get(self.pages.service_url()).send().await?;
+        let dummy_text = dummy_response.text().await?;
+        trace!("View state and form id values fetched.");
 
         // Set the view state and form id values if found
         self.view_state = get_view_state(&dummy_text);
@@ -188,25 +180,16 @@ impl Aurion {
         });
 
         // Send the request
+        trace!("Beginning menu child nodes request.");
         let response = self
             .client
             .post(self.pages.main_menu_url())
             .form(&payload)
             .send()
-            .await;
-
-        // Check if the request failed
-        if response.is_err() {
-            let message = format!(
-                "Failed to get menu child nodes: {}",
-                response.err().unwrap()
-            );
-            error!("{}", message);
-            return Err(Error::msg(message));
-        }
+            .await?;
+        trace!("Menu child nodes request sent.");
 
         // Get the raw html data from the response
-        let response = response.unwrap();
         let text = response.text().await.unwrap();
         let splitter = "<update id=\"form:sidebar\"><![CDATA[";
         let splitted = text.split(splitter).collect::<Vec<&str>>();
@@ -336,11 +319,7 @@ impl Aurion {
                 continue;
             }
 
-            let result = self.get_menu_child_nodes(menu_node.clone()).await;
-            if result.is_err() {
-                let message = format!("Failed to load menu node {}", menu_node);
-                return Err(Error::msg(message));
-            }
+            self.get_menu_child_nodes(menu_node.clone()).await?;
         }
 
         Ok(())
@@ -390,22 +369,16 @@ impl Aurion {
 
         // Send the request to load the page for getting the class groups
         let payload = self.default_parameters(class_group_id);
+        trace!("Sending first request to get class groups");
         let response = self
             .client
             .post(self.pages.main_menu_url())
             .form(&payload)
             .send()
-            .await;
-
-        // Check if the request was successful
-        if response.is_err() {
-            let message = format!("Request to get class groups failed");
-            error!("{}", message);
-            return Err(Error::msg(message));
-        }
+            .await?;
+        trace!("Response received from get class groups request");
 
         // Parse the response
-        let response = response.unwrap();
         let headers = response.headers();
 
         // Check if the response was successful
@@ -416,21 +389,13 @@ impl Aurion {
         }
 
         // Send the request to get the class groups
+        trace!("Sending request to get class groups");
         let response = self
             .client
             .get(self.pages.planning_choice_url())
             .send()
-            .await;
-
-        // Check if the request was successful
-        if response.is_err() {
-            let message = format!("Request to get class groups failed");
-            error!("{}", message);
-            return Err(Error::msg(message));
-        }
-
-        // Parse the response
-        let response = response.unwrap();
+            .await?;
+        trace!("Response received from get class groups request");
 
         // Parse the response data to dyer::Response to support XPath
         let body = dyer::Body::from(response.text().await.unwrap());
@@ -475,16 +440,11 @@ impl Aurion {
         end: Option<DateTime<Utc>>,
     ) -> Result<Vec<Event>> {
         // Send the request to get the schedule form id
-        let response = self.client.get(self.pages.planning_url()).send().await;
-
-        // Check if the request was successful
-        if response.is_err() {
-            let message = format!("Request to get schedule form id failed");
-            return Err(Error::msg(message));
-        }
+        trace!("Sending request to get schedule form id");
+        let response = self.client.get(self.pages.planning_url()).send().await?;
+        trace!("Request to get schedule form id sent");
 
         // Parse the response
-        let response = response.unwrap();
         let text = response.text().await.unwrap();
         let schedule_form_id = get_schedule_form_id(text.clone());
         let view_state = get_view_state(text.clone());
@@ -516,21 +476,16 @@ impl Aurion {
             "javax.faces.ViewState": view_state,
         });
 
+        trace!("Sending request to get schedule");
         let response = self
             .client
             .post(self.pages.planning_url())
             .form(&payload)
             .send()
-            .await;
-
-        // Check if the request was successful
-        if response.is_err() {
-            let message = format!("Request to get schedule failed");
-            return Err(Error::msg(message));
-        }
+            .await?;
+        trace!("Request to get schedule sent");
 
         // Parse the response
-        let response = response.unwrap();
         let text = response.text().await.unwrap();
         let splitter = "<![CDATA[{\"events\" : ";
         let splitted = text.split_once(splitter);
@@ -576,23 +531,17 @@ impl Aurion {
         }
 
         // Send the request to prepare to get the user's schedule
+        trace!("Preparing to get user schedule");
         let payload = self.default_parameters(self.menu.user_planning_id());
         let response = self
             .client
             .post(self.pages.main_menu_url())
             .form(&payload)
             .send()
-            .await;
-
-        // Check if the request was successful
-        if response.is_err() {
-            let message = format!("Request to prepare to get user schedule failed");
-            error!("{}", message);
-            return Err(Error::msg(message));
-        }
+            .await?;
+        trace!("Prepared to get user schedule");
 
         // Parse the response
-        let response = response.unwrap();
         let headers = response.headers().clone();
 
         // Check if the response is valid
@@ -603,8 +552,8 @@ impl Aurion {
         }
 
         // Send the request to get the user's schedule
-        let shedule = self.get_schedule(start, end).await.unwrap();
+        let schedule = self.get_schedule(start, end).await.unwrap();
 
-        Ok(shedule)
+        Ok(schedule)
     }
 }
