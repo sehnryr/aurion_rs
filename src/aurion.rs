@@ -2,15 +2,17 @@
 
 use std::cell::RefCell;
 use std::rc::Rc;
+use std::sync::Arc;
 
 use anyhow::{Error, Result};
 use chrono::{DateTime, Utc};
 #[allow(unused_imports)]
 use log::{debug, error, info, trace, warn};
+use reqwest::cookie::Jar;
+use reqwest::header::SET_COOKIE;
 use reqwest::redirect::Policy;
 use reqwest::{Client, ClientBuilder};
 use serde_json::{json, Value, Value::Bool};
-use http::header::SET_COOKIE;
 
 use crate::default::{school_end, school_start};
 use crate::event::{Event, RawEvent};
@@ -73,6 +75,30 @@ impl Aurion {
             "javax.faces.ViewState": self.view_state,
             "form:sidebar_menuid": menu_id.into(),
         })
+    }
+
+    /// Add the login credentials manually to the client.
+    pub fn manual_login<A: Into<String>, V: Into<String>>(
+        &mut self,
+        authentication_token: A,
+        view_state: V,
+        form_id: u8,
+    ) {
+        let authentication_token = authentication_token.into();
+        let view_state = view_state.into();
+
+        let cookie_store = Jar::default();
+        cookie_store.add_cookie_str(&authentication_token, &self.pages.service_url());
+
+        self.client = ClientBuilder::new()
+            .redirect(Policy::none())
+            .cookie_store(true)
+            .cookie_provider(Arc::new(cookie_store))
+            .build()
+            .unwrap();
+
+        self.view_state = Some(view_state);
+        self.form_id = Some(form_id);
     }
 
     /// Login to Aurion with the given credentials and return the authentication
