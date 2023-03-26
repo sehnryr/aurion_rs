@@ -10,6 +10,7 @@ use log::{debug, error, info, trace, warn};
 use reqwest::redirect::Policy;
 use reqwest::{Client, ClientBuilder};
 use serde_json::{json, Value, Value::Bool};
+use http::header::SET_COOKIE;
 
 use crate::default::{school_end, school_start};
 use crate::event::{Event, RawEvent};
@@ -74,7 +75,8 @@ impl Aurion {
         })
     }
 
-    /// Login to Aurion with the given credentials.
+    /// Login to Aurion with the given credentials and return the authentication
+    /// token.
     ///
     /// # Example
     ///
@@ -96,7 +98,7 @@ impl Aurion {
         &mut self,
         username: U,
         password: P,
-    ) -> Result<()> {
+    ) -> Result<String> {
         // Create the payload for the authentication request
         let payload = json!({
             "username": username.into(),
@@ -116,7 +118,8 @@ impl Aurion {
         // Check if the credentials are correct with the automated redirection
         // by Aurion
         trace!("Checking login response.");
-        if !response.headers().contains_key("location") {
+        let headers = response.headers().clone();
+        if !headers.contains_key("location") {
             let message = format!("Failed to login: username or password might be wrong.");
             error!("{}", message);
             return Err(Error::msg(message));
@@ -126,14 +129,17 @@ impl Aurion {
         // Aurion's main logged page
         trace!("Fetching view state and form id values.");
         let dummy_response = self.client.get(self.pages.service_url()).send().await?;
-        let dummy_text = dummy_response.text().await?;
         trace!("View state and form id values fetched.");
+        let dummy_text = dummy_response.text().await?;
 
         // Set the view state and form id values if found
         self.view_state = get_view_state(&dummy_text);
         self.form_id = get_form_id(&dummy_text);
 
-        Ok(())
+        // Get the authentication cookie
+        let cookie = headers.get(SET_COOKIE).unwrap();
+
+        Ok(std::str::from_utf8(cookie.as_bytes())?.to_string())
     }
 
     /// Get the menu child nodes of the given menu id.
