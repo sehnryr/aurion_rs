@@ -18,3 +18,18 @@ impl ClassGroup {
         Self { id, name }
     }
 }
+
+impl From<u32> for ClassGroup {
+    fn from(id: u32) -> Self {
+        Self {
+            id,
+            name: String::new(),
+        }
+    }
+}
+
+impl Into<u32> for ClassGroup {
+    fn into(self) -> u32 {
+        self.id
+    }
+}

@@ -357,25 +357,25 @@ impl Aurion {
         Ok(())
     }
 
-    /// Get the class groups designated by class_group_id.
+    /// Get the class groups designated by class_id.
     /// A class can have multiple groups, for example, a class can have a
     /// group for the morning and a group for the afternoon. This function
-    /// returns the groups designated by class_group_id.
+    /// returns the groups designated by class_id.
     pub async fn get_class_groups<T: Into<String>>(
         &self,
-        class_group_id: T,
+        class_id: T,
     ) -> Result<Vec<ClassGroup>, Box<dyn std::error::Error>> {
-        let class_group_id = class_group_id.into();
+        let class_id = class_id.into();
 
         // We need to check if the node is loaded. If it is not, we need
         // to load it first because of Aurion's lazy-loading menu tree.
 
         // Try to get the node from the menu tree
-        let node = self.menu.get_menu_node(class_group_id.clone());
+        let node = self.menu.get_menu_node(class_id.clone());
 
         // Check if the node was found
         if node.is_none() {
-            error!("Node {} not found", class_group_id.clone());
+            error!("Node {} not found", class_id.clone());
             return Err("failed to get class groups".into());
         }
 
@@ -384,20 +384,20 @@ impl Aurion {
 
         // Check if the node is a leaf node
         if !node.borrow().is_leaf() {
-            error!("Node {} is not a leaf node", class_group_id);
+            error!("Node {} is not a leaf node", class_id);
             return Err("failed to get class groups".into());
         }
 
         // Check if the node is loaded
         if !node.borrow().is_loaded() {
-            error!("Node {} is not loaded", class_group_id);
+            error!("Node {} is not loaded", class_id);
             return Err("failed to get class groups".into());
         }
 
         // Get the class groups
 
         // Send the request to load the page for getting the class groups
-        let payload = self.default_parameters(class_group_id);
+        let payload = self.default_parameters(class_id);
         let response = self
             .client
             .post(self.pages.main_menu_url())
@@ -578,12 +578,94 @@ impl Aurion {
         Ok(schedule)
     }
 
-    // pub async fn get_group_schedule<T: Into<String>>(
-    //     &mut self,
-    //     group_id: T,
-    //     start: Option<DateTime<Utc>>,
-    //     end: Option<DateTime<Utc>>,
-    // )
+    pub async fn get_class_groups_schedule<T: Into<String>, U: Into<ClassGroup>>(
+        &mut self,
+        class_id: T,
+        class_groups: Vec<U>,
+        start: Option<DateTime<Utc>>,
+        end: Option<DateTime<Utc>>,
+    ) -> Result<Vec<Event>, Box<dyn std::error::Error>> {
+        let class_id = class_id.into();
+        let num_class_groups = class_groups.len();
+
+        // Load the laxy-loaded groups selection page
+        let response = self
+            .client
+            .get(self.pages.planning_choice_url())
+            .send()
+            .await;
+
+        // Check if the request was successful
+        if response.is_err() {
+            error!("Failed to load the lazy-loaded groups selection page");
+            return Err("failed to get class groups schedule: failed to load the lazy-loaded groups selection page".into());
+        }
+
+        // Parse the response
+        let response = response.unwrap();
+        let text = response.text().await.unwrap();
+        let body = dyer::Body::from(text.clone());
+        let mut response = dyer::Response::new(body);
+
+        // Format the class_groups into a string for the request
+        let selection = class_groups
+            .into_iter()
+            .map(|class_group| class_group.into().id.to_string())
+            .collect::<Vec<String>>()
+            .join(",");
+
+        // Create payload
+        let mut payload = json!({
+            "form": "form",
+            "form:largeurDivCenter": 100, // By testing, this value cannot be less than 100
+            "form:messagesRubriqueInaccessible": "",
+            "form:search-texte": "",
+            "form:search-texte-avancer": "",
+            "form:input-expression-exacte": "",
+            "form:input-un-des-mots": "",
+            "form:input-aucun-des-mots": "",
+            "form:input-nombre-debut": "",
+            "form:input-nombre-fin": "",
+            "form:calendarDebut_input": "",
+            "form:calendarFin_input": "",
+            "javax.faces.ViewState": get_view_state(text),
+        });
+
+        // Add missing fields to the payload
+        let result = response
+            .xpath("//div[@id=\"form:dataTableFavori\"]//*[starts-with(@name, \"form:j_idt\")]");
+
+        for node in result {
+            let name = node.get_name();
+            if name.ends_with("reflowDD") {
+                payload[name] = Value::String("0_0".to_string());
+            } else if name.ends_with("selection") {
+                payload[name] = Value::String(selection.clone());
+            } else if name.ends_with("filter") {
+                payload[name] = Value::String("".to_string());
+            } else if name.ends_with("checkbox") {
+                payload[name] = serde_json::Value::Array(Vec::from_iter(
+                    std::iter::repeat(Value::String("on".to_string())).take(num_class_groups),
+                ));
+            }
+        }
+
+        let result = response.xpath("//div[@id=\"form:footerToolBar\"]/button");
+        for node in result {
+            let name = node.get_name();
+            payload[name] = Value::String("".to_string());
+        }
+
+        let result =
+            response.xpath("//div[@class=\"listeLangues\"]//input[starts-with(@name, \"form\")]");
+        for node in result {
+            let name = node.get_name();
+            payload[name.clone()] = Value::String("".to_string());
+            let name = name.rfind("_focus");
+        }
+
+        Ok(Vec::new())
+    }
 
     /// Get the user's schedule.
     /// The schedule is returned as a vector of `Value`s.
